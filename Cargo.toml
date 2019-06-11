@@ -23,6 +23,7 @@ hmac-sha256 = "0.1.1"
 rand = "0.6.5"
 base64 = "0.10.1"
 hex = "0.3.2"
+md5 = "0.6.1"
 reqwest = { version="0.9.17", default_features=false, features=["rustls-tls"]}
 #rusoto_core = {version = "0.39.0", default_features = false, features=["rustls"]}
 #rusoto_dynamodb = {version = "0.39.0", default_features = false, features=["rustls"]}
