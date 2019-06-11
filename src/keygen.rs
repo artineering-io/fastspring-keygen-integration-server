@@ -1,4 +1,4 @@
-use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use http::header::{ACCEPT, CONTENT_TYPE};
 use lambda_runtime::error::HandlerError;
 use lazy_static::lazy_static;
 use log::{debug};
@@ -41,7 +41,7 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
             "https://api.keygen.sh/v1/accounts/{}/licenses/{}/actions/{}",
             *KEYGEN_ACCOUNT_ID, license_key, action_verb
         ))
-        .header(AUTHORIZATION, format!("Bearer {}", *KEYGEN_ADMIN_TOKEN))
+        .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
         .header(ACCEPT, "application/vnd.api+json")
         .send()
         .map_err(|_| "request error")?;
@@ -49,6 +49,27 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
     debug!(
         "{} license {} status {}",
         action_verb,
+        license_key,
+        reply.status()
+    );
+    Ok(())
+}
+
+
+pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
+    let client = reqwest::Client::new();
+    let reply = client
+        .delete(&format!(
+            "https://api.keygen.sh/v1/accounts/{}/licenses/{}",
+            *KEYGEN_ACCOUNT_ID, license_key
+        ))
+        .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
+        .header(ACCEPT, "application/vnd.api+json")
+        .send()
+        .map_err(|_| "request error")?;
+
+    debug!(
+        "revoke license {} status {}",
         license_key,
         reply.status()
     );
@@ -95,7 +116,7 @@ pub fn generate_licenses(
                 "https://api.keygen.sh/v1/accounts/{}/licenses",
                 *KEYGEN_ACCOUNT_ID
             ))
-            .header(AUTHORIZATION, format!("Bearer {}", *KEYGEN_ADMIN_TOKEN))
+            .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
             .header(CONTENT_TYPE, "application/vnd.api+json")
             .header(ACCEPT, "application/vnd.api+json")
             .body(req_body.to_string())
@@ -122,7 +143,7 @@ pub fn generate_licenses(
                 "https://api.keygen.sh/v1/accounts/{}/licenses/{}/tokens",
                 *KEYGEN_ACCOUNT_ID, license_id
             ))
-            .header(AUTHORIZATION, format!("Bearer {}", *KEYGEN_ADMIN_TOKEN))
+            .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
             .header(CONTENT_TYPE, "application/vnd.api+json")
             .header(ACCEPT, "application/vnd.api+json")
             .body(req_body.to_string())

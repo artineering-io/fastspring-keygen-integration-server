@@ -20,11 +20,11 @@ fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
     let client = reqwest::Client::new();
 
     match req.uri().path() {
-        "/test/keygen/create" => match *req.method() {
+        "/fastspring-keygen-integration-service/keygen/create" => match *req.method() {
             http::Method::POST => handle_keygen_create(req, c),
             _ => not_allowed(req, c),
         },
-        "/test/webhooks" => match *req.method() {
+        "/fastspring-keygen-integration-service/webhooks" => match *req.method() {
             http::Method::POST => handle_webhook(&client, req, c),
             _ => not_allowed(req, c),
         },
@@ -99,7 +99,7 @@ fn handle_subscription_deactivated(
         {
             if let Some(licenses) = v.as_array() {
                 for l in licenses {
-                    let code = l["license"].as_str().ok_or("invalid format (.license)")?;
+                    let code = if let Some(s) = l["license"].as_str() { s } else { continue };
                     licenses_to_revoke.push(String::from(code));
                 }
             }
@@ -109,7 +109,7 @@ fn handle_subscription_deactivated(
     // revoke all licenses
     for lic in licenses_to_revoke.iter() {
         let key = license_key(lic).ok_or("invalid license key")?;
-        suspend_license(key)?;
+        keygen::revoke_license(key)?;
     }
 
     Ok(Response::builder()
