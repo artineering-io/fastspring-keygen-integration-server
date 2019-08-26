@@ -1,7 +1,7 @@
 use lambda_http::{Body, Request};
 use lambda_runtime::error::HandlerError;
 use lazy_static::lazy_static;
-use log::{debug, error};
+use log::{debug, error, info};
 use std::collections::HashMap;
 use std::env;
 
@@ -49,7 +49,7 @@ pub fn verify_license_gen(req: &Request) -> bool {
     // compare
     let ok = sig == &digest[..];
     if ok {
-        debug!("verify_license_gen: authenticated request from FastSpring");
+        info!("verify_license_gen: authenticated request from FastSpring");
     } else {
         error!("verify_license_gen: signature check failed");
     }
@@ -65,7 +65,7 @@ pub fn authentify_web_hook(req: &Request) -> bool {
     {
         h.to_owned()
     } else {
-        error!("Unable to authentify web hook request");
+        error!("authentify_web_hook: unable to authentify web hook");
         return false;
     };
 
@@ -81,7 +81,7 @@ pub fn authentify_web_hook(req: &Request) -> bool {
     // compare with header
     let ok = hash == calc_hash;
     if ok {
-        debug!("authentify_web_hook: authenticated webhook from FastSpring");
+        info!("authentify_web_hook: authenticated web hook from FastSpring");
     } else {
         error!("authentify_web_hook: signature check failed");
     }

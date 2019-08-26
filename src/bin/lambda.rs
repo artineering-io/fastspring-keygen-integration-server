@@ -1,16 +1,15 @@
-use crate::keygen::{generate_licenses, suspend_license};
 use dotenv;
+use fastspring_keygen_integration::fastspring;
+use fastspring_keygen_integration::keygen;
+use fastspring_keygen_integration::keygen::{generate_licenses, suspend_license};
+use fastspring_keygen_integration::util;
 use http::header::CONTENT_TYPE;
 use lambda_http::{lambda, Body, Request, RequestExt, Response};
 use lambda_runtime::error::HandlerError;
 use lambda_runtime::Context;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::error::Error;
-
-mod fastspring;
-mod keygen;
-mod util;
 
 fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
     debug!("router request={:?}", req);
@@ -81,7 +80,7 @@ fn handle_subscription_deactivated(
     debug!("handle_subscription_deactivated {:?}", data);
 
     let subscription_id = data["id"].as_str().ok_or("invalid format (.id)")?;
-    debug!("subscription deactivated: {}", subscription_id);
+    info!("subscription deactivated: {}", subscription_id);
 
     let order = fastspring::get_subscription_entries(client, subscription_id)?;
     let order_items = order[0]["order"]["items"]
@@ -99,7 +98,11 @@ fn handle_subscription_deactivated(
         {
             if let Some(licenses) = v.as_array() {
                 for l in licenses {
-                    let code = if let Some(s) = l["license"].as_str() { s } else { continue };
+                    let code = if let Some(s) = l["license"].as_str() {
+                        s
+                    } else {
+                        continue;
+                    };
                     licenses_to_revoke.push(String::from(code));
                 }
             }
@@ -144,7 +147,7 @@ fn handle_keygen_create(req: Request, _c: Context) -> Result<Response<Body>, Han
         .ok_or("invalid query parameters (no quantity)")?
         .parse()?;
 
-    let codes = generate_licenses(subscription, policy_id, quantity)?.join("\n");
+    let codes = generate_licenses(subscription, policy_id, quantity, None, false)?.join("\n");
 
     Ok(Response::builder()
         .status(http::StatusCode::OK)
@@ -168,8 +171,8 @@ fn not_allowed(_req: Request, _c: Context) -> Result<Response<Body>, HandlerErro
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
     dotenv::dotenv().ok();
-    simple_logger::init_with_level(log::Level::Debug).unwrap();
     lambda!(router);
     Ok(())
 }

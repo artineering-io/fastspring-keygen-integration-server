@@ -1,14 +1,14 @@
 use http::header::{ACCEPT, CONTENT_TYPE};
 use lambda_runtime::error::HandlerError;
 use lazy_static::lazy_static;
-use log::{debug};
+use log::{debug, info};
 use rand::Rng;
 use serde_json::json;
 use std::env;
 
 lazy_static! {
-    static ref KEYGEN_ADMIN_TOKEN: String = env::var("KEYGEN_ADMIN_TOKEN").unwrap();
-    static ref KEYGEN_ACCOUNT_ID: String = env::var("KEYGEN_ACCOUNT_ID").unwrap();
+    static ref KEYGEN_ADMIN_TOKEN: String = env::var("KEYGEN_ADMIN_TOKEN").expect("`KEYGEN_ADMIN_TOKEN` environment variable not set");
+    static ref KEYGEN_ACCOUNT_ID: String = env::var("KEYGEN_ACCOUNT_ID").expect("`KEYGEN_ACCOUNT_ID` environment variable not set");
     //static ref KEYGEN_POLICY_ID: String = env::var("KEYGEN_POLICY_ID").unwrap();
 }
 
@@ -46,7 +46,7 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
         .send()
         .map_err(|_| "request error")?;
 
-    debug!(
+    info!(
         "{} license {} status {}",
         action_verb,
         license_key,
@@ -54,7 +54,6 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
     );
     Ok(())
 }
-
 
 pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
     let client = reqwest::Client::new();
@@ -68,11 +67,7 @@ pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
         .send()
         .map_err(|_| "request error")?;
 
-    debug!(
-        "revoke license {} status {}",
-        license_key,
-        reply.status()
-    );
+    info!("Revoke license {} status {}", license_key, reply.status());
     Ok(())
 }
 
@@ -80,13 +75,15 @@ pub fn generate_licenses(
     subscription: &str,
     policy: &str,
     quantity: u32,
+    invoice_id: Option<&str>,
+    dry_run: bool,
 ) -> Result<Vec<String>, HandlerError> {
     // create license
     // 16-byte random number, hex encoded
     let client = reqwest::Client::new();
     let mut codes = Vec::new();
 
-    debug!("Generating {} licenses with policy {}", quantity, policy);
+    info!("Generating {} licenses with policy {}", quantity, policy);
 
     for _ in 0..quantity {
         let mut lic = [0u8; 16];
@@ -100,7 +97,8 @@ pub fn generate_licenses(
                 "attributes": {
                     "key": lic,
                     "metadata": {
-                        "fastSpringSubscriptionId": subscription
+                        "fastSpringSubscriptionId": subscription,
+                        "invoiceId": invoice_id.unwrap_or("")
                     }
                 },
                 "relationships": {
@@ -110,6 +108,19 @@ pub fn generate_licenses(
                 }
             }
         });
+
+        if dry_run {
+            info!("generate_licenses: DRY RUN");
+            info!(
+                " - endpoint: {}",
+                format!(
+                    "https://api.keygen.sh/v1/accounts/{}/licenses",
+                    *KEYGEN_ACCOUNT_ID
+                )
+            );
+            info!(" - body: {:#?}", req_body.to_string());
+            continue;
+        }
 
         let reply: serde_json::Value = client
             .post(&format!(
