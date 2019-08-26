@@ -65,9 +65,9 @@ fn main() {
                     eprintln!("Please specify a license count greater than 0.");
                     return;
                 }
-                Ok(v) => {
+                Ok(_) => {
                     eprintln!("Cannot generate more than 10 licenses at once. \
-                                Please specify a license count lower or equal than 10 \
+                                Please specify a license count up to 10 \
                                 and run this command multiple times.");
                     return;
                 }
@@ -86,19 +86,19 @@ fn main() {
             };
             if used_policy_shortcut {
                 println!(
-                    "*** generating {} license(s) with policy {} ({})",
+                    "Generating {} license(s) with policy {} ({})",
                     count, policy, actual_policy
                 );
             } else {
                 println!(
-                    "*** generating {} license(s) with policy {}",
+                    "Generating {} license(s) with policy {}",
                     count, actual_policy
                 );
             }
             println!("    - subscription ID: {}", subscription_id.unwrap_or(""));
             println!("    - invoice ID: {}", invoice_id.unwrap_or(""));
 
-            let licenses = generate_licenses(
+            let (licenses,errors) = generate_licenses(
                 subscription_id.unwrap_or(""),
                 actual_policy,
                 count,
@@ -106,28 +106,32 @@ fn main() {
                 dry_run,
             );
             if !dry_run {
-                match licenses {
-                    Ok(licenses) => {
-                        use clipboard::ClipboardContext;
-                        use clipboard::ClipboardProvider;
-                        use std::fmt::Write;
+                if !licenses.is_empty() {
+                    use clipboard::ClipboardContext;
+                    use clipboard::ClipboardProvider;
+                    use std::fmt::Write;
 
-                        println!("Licenses:");
-                        let mut all = String::new();
-                        for lic in licenses {
-                            println!(" - {}", lic);
-                            writeln!(all, "{}", lic).unwrap();
-                        }
+                    println!("{} license(s) successfully generated:", licenses.len());
+                    let mut all = String::new();
+                    for lic in licenses {
+                        println!(" - {}", lic);
+                        writeln!(all, "{}", lic).unwrap();
+                    }
 
-                        let ctx: Result<ClipboardContext,_> = ClipboardProvider::new();
-                        if let Ok(mut ctx) = ctx {
-                            if let Ok(_) = ctx.set_contents(all) {
-                                println!("Licenses copied to clipboard.")
-                            }
+                    let ctx: Result<ClipboardContext, _> = ClipboardProvider::new();
+                    if let Ok(mut ctx) = ctx {
+                        if let Ok(_) = ctx.set_contents(all) {
+                            println!("Licenses copied to clipboard.")
                         }
                     }
-                    Err(r) => {
-                        eprintln!("error generating licenses: {}", r);
+                }
+
+                println!();
+
+                if !errors.is_empty() {
+                    println!("{} error(s) generating licenses:", errors.len());
+                    for err in errors.iter() {
+                        println!("    - {}", err);
                     }
                 }
             }

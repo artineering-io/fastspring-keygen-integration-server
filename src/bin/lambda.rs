@@ -147,7 +147,12 @@ fn handle_keygen_create(req: Request, _c: Context) -> Result<Response<Body>, Han
         .ok_or("invalid query parameters (no quantity)")?
         .parse()?;
 
-    let codes = generate_licenses(subscription, policy_id, quantity, None, false)?.join("\n");
+    let (codes,errors) = generate_licenses(subscription, policy_id, quantity, None, false);
+    if !errors.is_empty() {
+        Err(format!("errors encountered while generating licenses ({} successfully generated)", codes.len()).as_str())?
+    }
+
+    let codes = codes.join("\n");
 
     Ok(Response::builder()
         .status(http::StatusCode::OK)

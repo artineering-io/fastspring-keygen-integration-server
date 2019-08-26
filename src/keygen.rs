@@ -71,27 +71,18 @@ pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
     Ok(())
 }
 
-pub fn generate_licenses(
-    subscription: &str,
-    policy: &str,
-    quantity: u32,
-    invoice_id: Option<&str>,
-    dry_run: bool,
-) -> Result<Vec<String>, HandlerError> {
-    // create license
-    // 16-byte random number, hex encoded
-    let client = reqwest::Client::new();
-    let mut codes = Vec::new();
+pub fn generate_license(client: &reqwest::Client,
+                        subscription: &str,
+                        policy: &str,
+                        invoice_id: Option<&str>,
+                        dry_run: bool) -> Result<String,HandlerError>
+{
+    let mut lic = [0u8; 16];
+    let mut rng = rand::thread_rng();
+    rng.fill(&mut lic);
+    let lic = hex::encode(lic);
 
-    info!("Generating {} licenses with policy {}", quantity, policy);
-
-    for _ in 0..quantity {
-        let mut lic = [0u8; 16];
-        let mut rng = rand::thread_rng();
-        rng.fill(&mut lic);
-        let lic = hex::encode(lic);
-
-        let req_body = json!({
+    let req_body = json!({
             "data": {
                 "type": "licenses",
                 "attributes": {
@@ -109,67 +100,89 @@ pub fn generate_licenses(
             }
         });
 
-        if dry_run {
-            info!("generate_licenses: DRY RUN");
-            info!(
-                " - endpoint: {}",
-                format!(
-                    "https://api.keygen.sh/v1/accounts/{}/licenses",
-                    *KEYGEN_ACCOUNT_ID
-                )
-            );
-            info!(" - body: {:#?}", req_body.to_string());
-            continue;
-        }
-
-        let reply: serde_json::Value = client
-            .post(&format!(
+    if dry_run {
+        info!("generate_licenses: DRY RUN");
+        info!(
+            " - endpoint: {}",
+            format!(
                 "https://api.keygen.sh/v1/accounts/{}/licenses",
                 *KEYGEN_ACCOUNT_ID
-            ))
-            .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
-            .header(CONTENT_TYPE, "application/vnd.api+json")
-            .header(ACCEPT, "application/vnd.api+json")
-            .body(req_body.to_string())
-            .send()
-            .map_err(|_| "request error")?
-            .json()
-            .map_err(|_| "invalid json")?;
+            )
+        );
+        info!(" - body: {:#?}", req_body.to_string());
+        return Ok("".to_string());
+    }
 
-        let license_id = reply["data"]["id"].as_str().ok_or("invalid reply")?;
-        let license_key = reply["data"]["attributes"]["key"]
-            .as_str()
-            .ok_or("invalid reply")?;
+    let reply: serde_json::Value = client
+        .post(&format!(
+            "https://api.keygen.sh/v1/accounts/{}/licenses",
+            *KEYGEN_ACCOUNT_ID
+        ))
+        .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
+        .header(CONTENT_TYPE, "application/vnd.api+json")
+        .header(ACCEPT, "application/vnd.api+json")
+        .body(req_body.to_string())
+        .send()
+        .map_err(|_| "request error")?
+        .json()
+        .map_err(|_| "invalid json")?;
 
-        //-------------------------------------------
-        // generate activation token for license
-        let req_body = json!({
+    let license_id = reply["data"]["id"].as_str().ok_or("invalid reply")?;
+    let license_key = reply["data"]["attributes"]["key"]
+        .as_str()
+        .ok_or("invalid reply")?;
+
+    //-------------------------------------------
+    // generate activation token for license
+    let req_body = json!({
             "data": {
                 "type": "tokens",
                 "attributes": {}
             }
         });
-        let reply: serde_json::Value = client
-            .post(&format!(
-                "https://api.keygen.sh/v1/accounts/{}/licenses/{}/tokens",
-                *KEYGEN_ACCOUNT_ID, license_id
-            ))
-            .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
-            .header(CONTENT_TYPE, "application/vnd.api+json")
-            .header(ACCEPT, "application/vnd.api+json")
-            .body(req_body.to_string())
-            .send()
-            .map_err(|_| "request error")?
-            .json()
-            .map_err(|_| "invalid json")?;
+    let reply: serde_json::Value = client
+        .post(&format!(
+            "https://api.keygen.sh/v1/accounts/{}/licenses/{}/tokens",
+            *KEYGEN_ACCOUNT_ID, license_id
+        ))
+        .bearer_auth(&*KEYGEN_ADMIN_TOKEN)
+        .header(CONTENT_TYPE, "application/vnd.api+json")
+        .header(ACCEPT, "application/vnd.api+json")
+        .body(req_body.to_string())
+        .send()
+        .map_err(|_| "request error")?
+        .json()
+        .map_err(|_| "invalid json")?;
 
-        let activation_token = reply["data"]["attributes"]["token"]
-            .as_str()
-            .ok_or("invalid reply")?;
+    let activation_token = reply["data"]["attributes"]["token"]
+        .as_str()
+        .ok_or("invalid reply")?;
 
-        // return activation code (activation token + license key)
-        let code = format!("{}.{}", activation_token, license_key);
-        codes.push(code)
+    // return activation code (activation token + license key)
+    Ok(format!("{}.{}", activation_token, license_key))
+}
+
+pub fn generate_licenses(
+    subscription: &str,
+    policy: &str,
+    quantity: u32,
+    invoice_id: Option<&str>,
+    dry_run: bool,
+) -> (Vec<String>, Vec<HandlerError>)
+{
+    let client = reqwest::Client::new();
+    let mut codes = Vec::new();
+    let mut errors = Vec::new();
+
+    info!("Generating {} licenses with policy {}", quantity, policy);
+
+    for _ in 0..quantity {
+        let code = generate_license(&client, subscription, policy, invoice_id, dry_run);
+        match code {
+            Ok(code) => codes.push(code),
+            Err(e) => errors.push(e)
+        }
     }
-    Ok(codes)
+
+    (codes,errors)
 }
