@@ -82,10 +82,25 @@ fn handle_subscription_deactivated(
     let subscription_id = data["id"].as_str().ok_or("invalid format (.id)")?;
     info!("subscription deactivated: {}", subscription_id);
 
-    let order = fastspring::get_subscription_entries(client, subscription_id)?;
-    let order_items = order[0]["order"]["items"]
+    let orders = fastspring::get_subscription_entries(client, subscription_id)?;
+
+    // find the original order
+    // according to the API, this is the entry whose ".reference" field does not include
+    // a "B" (for "billing") at the end. All the others are subscription billing orders.
+    let original_order = orders.as_array().ok_or("invalid format (orders)")?.iter().find(|&order| {
+        let order = &order["order"];
+        if order["reference"].is_null() { return false; }
+        if let Some(s) = order["reference"].as_str() {
+            !s.ends_with('B')
+        } else {
+            false
+        }
+    });
+
+    let original_order = original_order.ok_or("could not find original order")?;
+    let order_items = original_order["order"]["items"]
         .as_array()
-        .ok_or("invalid format (.[0].order.items)")?;
+        .ok_or("invalid format (.order.items)")?;
 
     // Collect all licenses to revoke
     let mut licenses_to_revoke = Vec::new();
