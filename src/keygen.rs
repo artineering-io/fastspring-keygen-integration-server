@@ -35,7 +35,7 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
         //LicenseAction::Reinstate => "reinstate",
     };
 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let reply = client
         .post(&format!(
             "https://api.keygen.sh/v1/accounts/{}/licenses/{}/actions/{}",
@@ -56,7 +56,7 @@ fn modify_license(license_key: &str, action: LicenseAction) -> Result<(), Handle
 }
 
 pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let reply = client
         .delete(&format!(
             "https://api.keygen.sh/v1/accounts/{}/licenses/{}",
@@ -71,7 +71,7 @@ pub fn revoke_license(license_key: &str) -> Result<(), HandlerError> {
     Ok(())
 }
 
-pub fn generate_license(client: &reqwest::blocking::Client,
+pub fn generate_license(client: &reqwest::Client,
                         subscription: &str,
                         policy: &str,
                         invoice_id: Option<&str>,
@@ -170,7 +170,7 @@ pub fn generate_licenses(
     dry_run: bool,
 ) -> (Vec<String>, Vec<HandlerError>)
 {
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let mut codes = Vec::new();
     let mut errors = Vec::new();
 

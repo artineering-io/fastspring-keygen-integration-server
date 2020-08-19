@@ -90,7 +90,7 @@ pub fn authentify_web_hook(req: &Request) -> bool {
 
 /// Returns subscription info
 pub fn get_subscription_entries(
-    client: &reqwest::blocking::Client,
+    client: &reqwest::Client,
     id: &str,
 ) -> Result<serde_json::Value, HandlerError> {
     let reply = client
