@@ -16,15 +16,15 @@ fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
     debug!("path={:?}", req.uri().path());
     debug!("query={:?}", req.query_string_parameters());
 
-    let client = reqwest::Client::new();
+    let client = reqwest::blocking::Client::new();
 
     match req.uri().path() {
         "/fastspring-keygen-integration-service/keygen/create" => match *req.method() {
-            http::Method::POST => handle_keygen_create(req, c),
+            lambda_http::http::Method::POST => handle_keygen_create(req, c),
             _ => not_allowed(req, c),
         },
         "/fastspring-keygen-integration-service/webhooks" => match *req.method() {
-            http::Method::POST => handle_webhook(&client, req, c),
+            lambda_http::http::Method::POST => handle_webhook(&client, req, c),
             _ => not_allowed(req, c),
         },
         _ => not_found(req, c),
@@ -36,13 +36,13 @@ fn license_key(code: &str) -> Option<&str> {
 }
 
 fn handle_webhook(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     req: Request,
     _c: Context,
 ) -> Result<Response<Body>, HandlerError> {
     if !fastspring::authentify_web_hook(&req) {
         return Ok(Response::builder()
-            .status(http::StatusCode::UNAUTHORIZED)
+            .status(lambda_http::http::StatusCode::UNAUTHORIZED)
             .body(Body::default())
             .unwrap());
     }
@@ -65,7 +65,7 @@ fn handle_webhook(
     }
 
     Ok(Response::builder()
-        .status(http::StatusCode::OK)
+        .status(lambda_http::http::StatusCode::OK)
         .body(Body::default())
         .unwrap())
 }
@@ -74,7 +74,7 @@ fn handle_webhook(
 ///
 /// This will suspend all licenses associated with the order.
 fn handle_subscription_deactivated(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     data: &serde_json::Value,
 ) -> Result<Response<Body>, HandlerError> {
     debug!("handle_subscription_deactivated {:?}", data);
@@ -131,7 +131,7 @@ fn handle_subscription_deactivated(
     }
 
     Ok(Response::builder()
-        .status(http::StatusCode::OK)
+        .status(lambda_http::http::StatusCode::OK)
         .body(().into())
         .unwrap())
 }
@@ -140,7 +140,7 @@ fn handle_subscription_deactivated(
 fn handle_keygen_create(req: Request, _c: Context) -> Result<Response<Body>, HandlerError> {
     if !fastspring::verify_license_gen(&req) {
         return Ok(Response::builder()
-            .status(http::StatusCode::UNAUTHORIZED)
+            .status(lambda_http::http::StatusCode::UNAUTHORIZED)
             .body(Body::default())
             .unwrap());
     }
@@ -170,22 +170,22 @@ fn handle_keygen_create(req: Request, _c: Context) -> Result<Response<Body>, Han
     let codes = codes.join("\n");
 
     Ok(Response::builder()
-        .status(http::StatusCode::OK)
-        .header(CONTENT_TYPE, "text/plain")
+        .status(lambda_http::http::StatusCode::OK)
+        .header(lambda_http::http::header::CONTENT_TYPE, "text/plain")
         .body(codes.into())
         .unwrap())
 }
 
 fn not_found(_req: Request, _c: Context) -> Result<Response<Body>, HandlerError> {
     Ok(Response::builder()
-        .status(http::StatusCode::NOT_FOUND)
+        .status(lambda_http::http::StatusCode::NOT_FOUND)
         .body(Body::default())
         .unwrap())
 }
 
 fn not_allowed(_req: Request, _c: Context) -> Result<Response<Body>, HandlerError> {
     Ok(Response::builder()
-        .status(http::StatusCode::METHOD_NOT_ALLOWED)
+        .status(lambda_http::http::StatusCode::METHOD_NOT_ALLOWED)
         .body(Body::default())
         .unwrap())
 }
