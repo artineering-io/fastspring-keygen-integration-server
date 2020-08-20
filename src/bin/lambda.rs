@@ -117,7 +117,7 @@ fn patreon_handle_pledge_create(
     let email = Message::builder()
         .from("Artineering <hello@artineering.io>".parse().unwrap())
         .reply_to("Artineering <hello@artineering.io>".parse().unwrap())
-        .to("user_email".parse().unwrap())
+        .to(user_email.parse().unwrap())
         .subject("Your license key for MNPRX Community")
         .body(format!("Use the following license key: {}", license))
         .unwrap();
