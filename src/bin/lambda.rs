@@ -11,6 +11,12 @@ use lambda_runtime::Context;
 use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::error::Error;
+use std::env;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref MNPRX_COMMUNITY_KEYGEN_POLICY_ID: String = env::var("MNPRX_COMMUNITY_KEYGEN_POLICY_ID").unwrap();
+}
 
 fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
     debug!("router request={:?}", req);
@@ -75,10 +81,24 @@ fn handle_patreon_webhook(
 /// Patreon pledge create trigger
 fn patreon_handle_pledge_create(
     client: &reqwest::Client,
-    data: &serde_json::Value,
+    body: &serde_json::Value,
 ) -> Result<Response<Body>, HandlerError>
 {
-    debug!("handle_pledge_create {:?}", data);
+    debug!("handle_pledge_create {:?}", body);
+
+    let user_id = body["data"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.patron.data.id)")?;
+
+    let license=
+        keygen::generate_license(
+            client,
+            "PATREON",
+            MNPRX_COMMUNITY_KEYGEN_POLICY_ID.as_ref(),
+            None,
+            Some(user_id),
+        false)?;
+
+    // fetch the user email somewhere
+
 
     Ok(Response::builder()
         .status(http::StatusCode::OK)

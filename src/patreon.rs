@@ -29,10 +29,11 @@ pub fn authentify_web_hook(req: &Request) -> bool {
 
     match mac.verify(&signature) {
         Ok(_) => {
+            info!("patreon::authentify_web_hook: authenticated web hook from Patreon");
             return true;
         }
         Err(e) => {
-            error!("authentify_web_hook: signature check failed {}", e);
+            error!("patreon::authentify_web_hook: signature check failed {}", e);
             return false;
         }
     }

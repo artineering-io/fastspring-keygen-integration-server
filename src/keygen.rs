@@ -75,6 +75,7 @@ pub fn generate_license(client: &reqwest::Client,
                         subscription: &str,
                         policy: &str,
                         invoice_id: Option<&str>,
+                        patreon_user_id: Option<&str>,
                         dry_run: bool) -> Result<String,HandlerError>
 {
     let mut lic = [0u8; 16];
@@ -89,6 +90,7 @@ pub fn generate_license(client: &reqwest::Client,
                     "key": lic,
                     "metadata": {
                         "fastSpringSubscriptionId": subscription,
+                        "patreonUserId": patreon_user_id.unwrap_or(""),
                         "invoiceId": invoice_id.unwrap_or("")
                     }
                 },
@@ -177,7 +179,7 @@ pub fn generate_licenses(
     info!("Generating {} licenses with policy {}", quantity, policy);
 
     for _ in 0..quantity {
-        let code = generate_license(&client, subscription, policy, invoice_id, dry_run);
+        let code = generate_license(&client, subscription, policy, invoice_id, None, dry_run);
         match code {
             Ok(code) => codes.push(code),
             Err(e) => errors.push(e)
