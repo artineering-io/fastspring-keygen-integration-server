@@ -72,9 +72,9 @@ fn handle_patreon_webhook(
     let body = util::body_to_json(req.body())?;
 
     if trigger == "pledges:create" {
-        patreon_handle_pledge_create(client, &body);
+        patreon_handle_pledge_create(client, &body)?;
     } else if trigger == "pledges:delete" {
-        patreon_handle_pledge_delete(client, &body);
+        patreon_handle_pledge_delete(client, &body)?;
     }
 
     Ok(Response::builder()
@@ -91,7 +91,7 @@ fn patreon_handle_pledge_create(
 {
     debug!("handle_pledge_create {:?}", body);
 
-    let user_id = body["data"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.patron.data.id)")?;
+    let user_id = body["data"]["relationships"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.patron.data.id)")?;
 
     let mut user_email = None;
     for included in body["included"].as_array().ok_or("invalid format (.included)")?.iter() {
@@ -100,7 +100,7 @@ fn patreon_handle_pledge_create(
         }
     }
 
-    let user_email = user_email.expect("could not find patron email");
+    let user_email = user_email.ok_or("could not find patron email")?;
 
     debug!("patron email: {}", user_email);
 
