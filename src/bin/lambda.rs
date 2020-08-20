@@ -16,6 +16,9 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref MNPRX_COMMUNITY_KEYGEN_POLICY_ID: String = env::var("MNPRX_COMMUNITY_KEYGEN_POLICY_ID").unwrap();
+    static ref SMTP_SERVER: String = env::var("SMTP_SERVER").unwrap();
+    static ref SMTP_USERNAME: String = env::var("SMTP_USERNAME").unwrap();
+    static ref SMTP_PASSWORD: String = env::var("SMTP_PASSWORD").unwrap();
 }
 
 fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
@@ -88,6 +91,20 @@ fn patreon_handle_pledge_create(
 
     let user_id = body["data"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.patron.data.id)")?;
 
+    let mut user_email = None;
+    for included in body["included"].as_array().ok_or("invalid format (.included)")?.iter() {
+        if included["attributes"]["id"].as_str().ok_or("invalid format (.included.#.attributes.id)")? == user_id {
+            user_email = Some(included["attributes"]["email"].as_str().ok_or("invalid format (.included.#.attributes.email)")?);
+        }
+    }
+
+    let user_email = match user_email {
+        Some(e) => e,
+        None => return Err("could not find patron email".into())
+    };
+
+    debug!("patron email: {}", user_email);
+
     let license=
         keygen::generate_license(
             client,
@@ -95,9 +112,9 @@ fn patreon_handle_pledge_create(
             MNPRX_COMMUNITY_KEYGEN_POLICY_ID.as_ref(),
             None,
             Some(user_id),
-        false)?;
+            false)?;
 
-    // fetch the user email somewhere
+    // send the license to the patron
 
 
     Ok(Response::builder()

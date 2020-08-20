@@ -2,6 +2,7 @@ use clap::{App, Arg, SubCommand};
 use fastspring_keygen_integration::keygen::generate_licenses;
 use dotenv::dotenv;
 
+const POLICY_COMMUNITY: &str = "94a3abe1-2646-4868-94fe-e2032e82c2e2";
 const POLICY_STUDIO: &str = "b60267b3-2a7a-468b-b868-7eb5db1a9a75";
 const POLICY_INDIE: &str = "77e58101-57e4-487d-9e64-adf3bb699a6e";
 
@@ -19,7 +20,7 @@ fn main() {
                                 .takes_value(true)
                                 .index(1)
                                 .required(true)
-                                .help("UUID of the policy to use for creating the licenses (shortcuts \"STUDIO\" and \"INDIE\" are also allowed).")
+                                .help("UUID of the policy to use for creating the licenses (shortcuts \"STUDIO\", \"INDIE\" and \"COMMUNITY\" are also allowed).")
                         )
                         .arg(Arg::with_name("dry-run").long("dry-run").help("display the contents of API requests to keygen.sh but do not send them"))
                         .arg(
@@ -82,6 +83,7 @@ fn main() {
             let (actual_policy, used_policy_shortcut) = match policy {
                 "STUDIO" => (POLICY_STUDIO, true),
                 "INDIE" => (POLICY_INDIE, true),
+                "COMMUNITY" => (POLICY_COMMUNITY, true),
                 _ => (policy, false),
             };
             if used_policy_shortcut {
