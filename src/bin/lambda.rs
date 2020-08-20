@@ -57,11 +57,12 @@ fn handle_patreon_webhook(
         .ok_or("invalid format (X-Patreon-Event)")?
         .to_str().ok().ok_or("invalid format (X-Patreon-Event)")?;
 
+    debug!("X-Patreon-Event: {}", trigger);
     let body = util::body_to_json(req.body())?;
 
-    if trigger == "pledge:create" {
+    if trigger == "pledges:create" {
         patreon_handle_pledge_create(client, &body);
-    } else if trigger == "pledge:delete" {
+    } else if trigger == "pledges:delete" {
         patreon_handle_pledge_delete(client, &body);
     }
 
