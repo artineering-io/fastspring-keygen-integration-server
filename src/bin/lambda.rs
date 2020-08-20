@@ -3,6 +3,7 @@ use fastspring_keygen_integration::fastspring;
 use fastspring_keygen_integration::keygen;
 use fastspring_keygen_integration::keygen::{generate_licenses, suspend_license};
 use fastspring_keygen_integration::util;
+use fastspring_keygen_integration::patreon;
 use http::header::CONTENT_TYPE;
 use lambda_http::{lambda, Body, Request, RequestExt, Response};
 use lambda_runtime::error::HandlerError;
@@ -27,6 +28,10 @@ fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
             http::Method::POST => handle_webhook(&client, req, c),
             _ => not_allowed(req, c),
         },
+        "/fastspring-keygen-integration-service/patreon" => match *req.method() {
+            http::Method::POST => handle_patreon_webhook(&client, req, c),
+            _ => not_allowed(req, c),
+        },
         _ => not_found(req, c),
     }
 }
@@ -34,6 +39,66 @@ fn router(req: Request, c: Context) -> Result<Response<Body>, HandlerError> {
 fn license_key(code: &str) -> Option<&str> {
     code.split('.').nth(1)
 }
+
+fn handle_patreon_webhook(
+    client: &reqwest::Client,
+    req: Request,
+    _c: Context,
+) -> Result<Response<Body>, HandlerError>
+{
+    if !patreon::authentify_web_hook(&req) {
+        return Ok(Response::builder()
+            .status(http::StatusCode::UNAUTHORIZED)
+            .body(Body::default())
+            .unwrap());
+    }
+
+    let trigger = req.headers().get("X-Patreon-Event")
+        .ok_or("invalid format (X-Patreon-Event)")?
+        .to_str().ok().ok_or("invalid format (X-Patreon-Event)")?;
+
+    let body = util::body_to_json(req.body())?;
+
+    if trigger == "pledge:create" {
+        patreon_handle_pledge_create(client, &body);
+    } else if trigger == "pledge:delete" {
+        patreon_handle_pledge_delete(client, &body);
+    }
+
+    Ok(Response::builder()
+        .status(http::StatusCode::OK)
+        .body(Body::default())
+        .unwrap())
+}
+
+/// Patreon pledge create trigger
+fn patreon_handle_pledge_create(
+    client: &reqwest::Client,
+    data: &serde_json::Value,
+) -> Result<Response<Body>, HandlerError>
+{
+    debug!("handle_pledge_create {:?}", data);
+
+    Ok(Response::builder()
+        .status(http::StatusCode::OK)
+        .body(().into())
+        .unwrap())
+}
+
+/// Patreon pledge delete trigger
+fn patreon_handle_pledge_delete(
+    client: &reqwest::Client,
+    data: &serde_json::Value,
+) -> Result<Response<Body>, HandlerError>
+{
+    debug!("handle_pledge_delete {:?}", data);
+
+    Ok(Response::builder()
+        .status(http::StatusCode::OK)
+        .body(().into())
+        .unwrap())
+}
+
 
 fn handle_webhook(
     client: &reqwest::Client,
