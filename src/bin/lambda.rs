@@ -13,6 +13,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::env;
 use lazy_static::lazy_static;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{Message, SmtpTransport, Transport};
 
 lazy_static! {
     static ref MNPRX_COMMUNITY_KEYGEN_POLICY_ID: String = env::var("MNPRX_COMMUNITY_KEYGEN_POLICY_ID").unwrap();
@@ -115,7 +117,25 @@ fn patreon_handle_pledge_create(
             false)?;
 
     // send the license to the patron
+    let email = Message::builder()
+        .from("Artineering <hello@artineering.io>".parse().unwrap())
+        .reply_to("Artineering <hello@artineering.io>".parse().unwrap())
+        .to("user_email".parse().unwrap())
+        .subject("Your license key for MNPRX Community")
+        .body(format!("Use the following license key: {}", license))
+        .unwrap();
 
+    let creds = Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
+
+    let mailer = SmtpTransport::relay(SMTP_SERVER.as_ref())
+        .unwrap()
+        .credentials(creds)
+        .build();
+
+    match mailer.send(&email) {
+        Ok(_) => info!("Email sent successfully"),
+        Err(e) => panic!("Could not send email: {:?}", e),
+    }
 
     Ok(Response::builder()
         .status(http::StatusCode::OK)

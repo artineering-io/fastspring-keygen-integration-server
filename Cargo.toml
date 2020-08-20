@@ -25,6 +25,5 @@ hex = "0.3.2"
 md5 = "0.6.1"
 hmac = "0.9.0"
 other-md5 = { version = "0.9", package = "md-5" }
-#rusoto_core = {version = "0.42.0", default_features=false, features=["rustls"]}
-#rusoto_ses = {version = "0.42.0", default_features=false, features=["rustls"]}
+lettre = "0.10.0-alpha.1"
 reqwest = { version="0.9.17", default_features=false, features=["rustls-tls"]}
