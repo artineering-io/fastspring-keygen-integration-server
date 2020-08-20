@@ -100,10 +100,7 @@ fn patreon_handle_pledge_create(
         }
     }
 
-    let user_email = match user_email {
-        Some(e) => e,
-        None => return Err("could not find patron email".into())
-    };
+    let user_email = user_email.expect("could not find patron email");
 
     debug!("patron email: {}", user_email);
 
