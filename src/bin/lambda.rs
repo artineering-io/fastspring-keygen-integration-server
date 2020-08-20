@@ -95,7 +95,7 @@ fn patreon_handle_pledge_create(
 
     let mut user_email = None;
     for included in body["included"].as_array().ok_or("invalid format (.included)")?.iter() {
-        if included["attributes"]["id"].as_str().ok_or("invalid format (.included.#.attributes.id)")? == user_id {
+        if included["id"].as_str().ok_or("invalid format (.included.#.id)")? == user_id {
             user_email = Some(included["attributes"]["email"].as_str().ok_or("invalid format (.included.#.attributes.email)")?);
         }
     }
