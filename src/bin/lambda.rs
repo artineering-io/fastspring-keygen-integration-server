@@ -91,12 +91,14 @@ fn patreon_handle_pledge_create(
 {
     debug!("handle_pledge_create {:?}", body);
 
-    let user_id = body["data"]["relationships"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.patron.data.id)")?;
+    let user_id = body["data"]["relationships"]["patron"]["data"]["id"].as_str().ok_or("invalid format (.data.relationships.patron.data.id)")?;
 
     let mut user_email = None;
+    let mut user_first_name = None;
     for included in body["included"].as_array().ok_or("invalid format (.included)")?.iter() {
         if included["id"].as_str().ok_or("invalid format (.included.#.id)")? == user_id {
             user_email = Some(included["attributes"]["email"].as_str().ok_or("invalid format (.included.#.attributes.email)")?);
+            user_first_name = included["attributes"]["first_name"].as_str();
         }
     }
 
@@ -113,13 +115,32 @@ fn patreon_handle_pledge_create(
             Some(user_id),
             false)?;
 
+    let user_name = body["data"]["relationships"]["patron"]["data"]["id"].as_str().unwrap_or("");
+
+    let email_body = format!(r##"Hi {},
+
+Thank you for joining our Patreon and welcome to our community!
+
+MNPRX for Maya (Win 10) can be downloaded from here: https://artineering.io/community-releases
+
+You can activate your MNPRX Community license with the following key:
+{}
+
+For more information on how to install and activate your license, please refer to the documentation here: https://artineering.io/software/MNPRX/docs/installation/
+
+If you encounter any issues, please feel free to reach out to us through the Discord community, we are here to help.
+Have fun creating something awesome and unique using MNPRX and feel free to share your results with the community.
+
+Warm regards from all of us,
+The Artineering team."##, user_first_name.unwrap_or(""), license);
+
     // send the license to the patron
     let email = Message::builder()
         .from("Artineering <hello@artineering.io>".parse().unwrap())
         .reply_to("Artineering <hello@artineering.io>".parse().unwrap())
         .to(user_email.parse().unwrap())
         .subject("Your license key for MNPRX Community")
-        .body(format!("Use the following license key: {}", license))
+        .body(email_body)
         .unwrap();
 
     let creds = Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
