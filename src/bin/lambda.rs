@@ -117,7 +117,7 @@ fn patreon_handle_pledge_create(
 
     let user_name = body["data"]["relationships"]["patron"]["data"]["id"].as_str().unwrap_or("");
 
-    let email_body = format!(r##"Hi {},
+    let email_body = format!(r##"Hi,
 
 Thank you for joining our Patreon and welcome to our community!
 
@@ -132,7 +132,7 @@ If you encounter any issues, please feel free to reach out to us through the Dis
 Have fun creating something awesome and unique using MNPRX and feel free to share your results with the community.
 
 Warm regards from all of us,
-The Artineering team."##, user_first_name.unwrap_or(""), license);
+The Artineering team."##, license);
 
     // send the license to the patron
     let email = Message::builder()
