@@ -1,0 +1,5 @@
+# build files
+keygen-cli/target
+
+# rust
+*.lock
