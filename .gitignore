@@ -1,5 +1,8 @@
 # build files
 keygen-cli/target
+target
+bootstrap
+*.zip
 
 # rust
 *.lock
