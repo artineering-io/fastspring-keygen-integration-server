@@ -119,27 +119,29 @@ fn patreon_handle_pledge_create(
 
     let email_body = format!(r##"Hi,
 
-Thank you for joining our Patreon and welcome to our community!
 
-MNPRX for Maya (Win 10) can be downloaded from here: https://artineering.io/community-releases
+Thank you for becoming our Patreon!
 
-You can activate your MNPRX Community license with the following key:
+You can activate your Flair Community license with the following key:
 {}
 
-For more information on how to install and activate your license, please refer to the documentation here: https://artineering.io/software/MNPRX/docs/installation/
+For more information on how to install and activate your license, please refer to the documentation: https://docs.artineering.io/flair/setup/
 
-If you encounter any issues, please feel free to reach out to us through the Discord community, we are here to help.
-Have fun creating something awesome and unique using MNPRX and feel free to share your results with the community.
+If you encounter any issues, please feel free to reach out to us through Discord, we are here to help.
+Have fun using Flair and make sure to share your results with the community.
 
-Warm regards from all of us,
-The Artineering team."##, license);
+Cheers,
+
+
+Your team at Artineering."##, license);
 
     // send the license to the patron
     let email = Message::builder()
         .from("Artineering <hello@artineering.io>".parse().unwrap())
         .reply_to("Artineering <hello@artineering.io>".parse().unwrap())
         .to(user_email.parse().unwrap())
-        .subject("Your license key for MNPRX Community")
+        .bcc("patreon@artineering.io".parse().unwrap())
+        .subject("[Flair] Your Community license key")
         .body(email_body)
         .unwrap();
 
